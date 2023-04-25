@@ -10,7 +10,7 @@ from models import eventModel, verdictModel, eventResponseModel
 
 app = FastAPI()
 
-client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@localhost:27017")
+client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@mongo:27017")
 db = client["data"]
 verdicts = db["verdicts"]
 
@@ -42,8 +42,6 @@ async def scanFile(file: Annotated[bytes, File()]):
     if not validateFile(file):
         return
 
-
-
     file_hash = hashlib.md5(file).hexdigest()
 
     verdictLookup = await verdicts.find_one({'hash': file_hash})
@@ -51,7 +49,7 @@ async def scanFile(file: Annotated[bytes, File()]):
         return verdictModel(hash=file_hash, risk_level=verdictLookup['risk_level'])
 
     try:
-        response = requests.post(blackbox_path, files={"file":("aaa.txt",file)}).json()
+        response = requests.post(blackbox_path, files={"file": ("aaa.txt", file)}).json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     print(response)
@@ -62,5 +60,5 @@ async def scanFile(file: Annotated[bytes, File()]):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app,port=8000,host='0.0.0.0')
+    uvicorn.run(app, port=8000, host='0.0.0.0')
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
