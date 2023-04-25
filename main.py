@@ -1,13 +1,12 @@
 import hashlib
 
-import fastapi
 import motor.motor_asyncio
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+import requests
+import uvicorn
+from fastapi import FastAPI, File, HTTPException
 from typing_extensions import Annotated
 
 from models import eventModel, verdictModel, eventResponseModel
-
-import requests
 
 app = FastAPI()
 
@@ -63,5 +62,5 @@ async def scanFile(file: Annotated[bytes, File()]):
 
 
 if __name__ == '__main__':
-    pass
+    uvicorn.run(app,port=8000,host='0.0.0.0')
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

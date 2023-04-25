@@ -1,0 +1,7 @@
+aiohttp
+pydantic
+motor
+requests
+fastapi
+uvicorn
+python-multipart
