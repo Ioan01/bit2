@@ -1,11 +1,11 @@
-version: '3.1'
+version: '3.9'
 
 services:
   mongo:
     image: mongo
     restart: always
     ports:
-      - "27017:27017"
+      - '27017:27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
@@ -16,5 +16,27 @@ services:
     image: test-image-name
     build: .
     restart: always
+    stop_grace_period: 1s
+    environment:
+      MONGO_URL: "mongodb://root:example@mongo:27017"
     ports:
-      - "8000:8000"
+      - '8000:8000'
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
