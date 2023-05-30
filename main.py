@@ -3,16 +3,15 @@ import os
 
 import aio_pika
 import motor.motor_asyncio
-import requests
 import redis
-
+import requests
 import uvicorn
 from aio_pika import ExchangeType, DeliveryMode
 from fastapi import FastAPI, File, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from typing_extensions import Annotated
 
 from models import eventModel, verdictModel, eventResponseModel
-from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
 
@@ -49,11 +48,14 @@ blackbox_path = 'https://beta.nimbus.bitdefender.net/liga-ac-labs-cloud/blackbox
 
 
 async def findCachedOrQueryRiskLevel(hash: str) -> int:
-    riskLevel = redis_client.get(hash)
+    if redis_client is not None:
+        riskLevel = redis_client.get(hash)
+    else:
+        riskLevel = None
 
     if riskLevel is None:
         verdict = await verdicts.find_one({"hash": hash})
-        if verdict is not None:
+        if verdict is not None and redis_client is not None:
             redis_client.set(hash, verdict["risk_level"], 30)
             return verdict["risk_level"]
         return -1
@@ -66,9 +68,8 @@ async def events(event: eventModel) -> eventResponseModel:
     fileVerdict = verdictModel(hash=event.file.file_hash, risk_level=-1)
     processVerdict = verdictModel(hash=event.file.file_hash, risk_level=-1)
 
-    if redis_client is not None:
-        fileRiskLevel = await findCachedOrQueryRiskLevel(event.file.file_hash)
-        processRiskLevel = await findCachedOrQueryRiskLevel(event.last_access.hash)
+    fileRiskLevel = await findCachedOrQueryRiskLevel(event.file.file_hash)
+    processRiskLevel = await findCachedOrQueryRiskLevel(event.last_access.hash)
 
     fileVerdict.risk_level = fileRiskLevel
     processVerdict.risk_level = processRiskLevel
