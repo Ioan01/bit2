@@ -40,3 +40,16 @@ services:
       - "6379:6379"
     volumes:
       - ./redis_data:/data
+  rabbitmq:
+    image: 'bitnami/rabbitmq:latest'
+    ports:
+      - "15672:15672"
+    volumes:
+      - ./rabbitmq-data:/bitnami/rabbitmq/mnesia
+    networks:
+      - elk-net
+      - default
+networks:
+  elk-net:
+    external: true
+    name: elk-net

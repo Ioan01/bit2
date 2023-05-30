@@ -1,11 +1,13 @@
 import hashlib
 import os
 
+import aio_pika
 import motor.motor_asyncio
 import requests
 import redis
 
 import uvicorn
+from aio_pika import ExchangeType, DeliveryMode
 from fastapi import FastAPI, File, HTTPException
 from typing_extensions import Annotated
 
@@ -19,6 +21,19 @@ redis_client.set('a', 'b', )
 
 b = redis_client.get('a')
 print(b)
+
+
+async def rabbitmq_exchange():
+    # Perform connection
+    connection = await aio_pika.connect("amqp://user:bitnami@rabbitmq/")
+    # Creating a channel
+    channel = await connection.channel()
+    return await channel.declare_exchange(
+        "logs", ExchangeType.FANOUT,
+    )
+
+
+logs_exchange = None
 
 connectionString = os.getenv("MONGO_URL") or "mongodb://root:example@localhost:27017"
 
@@ -54,6 +69,17 @@ async def events(event: eventModel) -> eventResponseModel:
 
     fileVerdict.risk_level = fileRiskLevel
     processVerdict.risk_level = processRiskLevel
+
+    global logs_exchange
+    if logs_exchange is None:
+        logs_exchange = await rabbitmq_exchange()
+
+    response = {}
+    message = aio_pika.Message(
+        event.json().encode(),
+        delivery_mode=DeliveryMode.PERSISTENT,
+    )
+    await logs_exchange.publish(message, routing_key="test")
 
     return eventResponseModel(file=fileVerdict, process=processVerdict)
 

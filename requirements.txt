@@ -7,3 +7,4 @@ uvicorn
 python-multipart
 prometheus-fastapi-instrumentator
 redis
+aio-pika
