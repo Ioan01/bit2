@@ -16,16 +16,20 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
 
-redis_client = redis.Redis(host='redis', port=6379, db=0)
-redis_client.set('a', 'b', )
-
-b = redis_client.get('a')
-print(b)
+redis_client = None
+if os.getenv('REDIS_URL') is not None:
+    redis_client = redis.Redis(host=os.getenv('REDIS_URL'), port=6379, db=0)
+else:
+    print('Redis not supplied')
 
 
 async def rabbitmq_exchange():
     # Perform connection
-    connection = await aio_pika.connect("amqp://user:bitnami@rabbitmq/")
+    if os.getenv('RABBIT_URL') is None:
+        print('Rabbit not found')
+        return None
+
+    connection = await aio_pika.connect(os.getenv('RABBIT_URL'))
     # Creating a channel
     channel = await connection.channel()
     return await channel.declare_exchange(
@@ -37,7 +41,6 @@ logs_exchange = None
 
 connectionString = os.getenv("MONGO_URL") or "mongodb://root:example@localhost:27017"
 
-
 client = motor.motor_asyncio.AsyncIOMotorClient(connectionString)
 db = client["data"]
 verdicts = db["verdicts"]
@@ -46,7 +49,6 @@ blackbox_path = 'https://beta.nimbus.bitdefender.net/liga-ac-labs-cloud/blackbox
 
 
 async def findCachedOrQueryRiskLevel(hash: str) -> int:
-
     riskLevel = redis_client.get(hash)
 
     if riskLevel is None:
@@ -64,8 +66,9 @@ async def events(event: eventModel) -> eventResponseModel:
     fileVerdict = verdictModel(hash=event.file.file_hash, risk_level=-1)
     processVerdict = verdictModel(hash=event.file.file_hash, risk_level=-1)
 
-    fileRiskLevel = await findCachedOrQueryRiskLevel(event.file.file_hash)
-    processRiskLevel = await findCachedOrQueryRiskLevel(event.last_access.hash)
+    if redis_client is not None:
+        fileRiskLevel = await findCachedOrQueryRiskLevel(event.file.file_hash)
+        processRiskLevel = await findCachedOrQueryRiskLevel(event.last_access.hash)
 
     fileVerdict.risk_level = fileRiskLevel
     processVerdict.risk_level = processRiskLevel
@@ -79,7 +82,8 @@ async def events(event: eventModel) -> eventResponseModel:
         event.json().encode(),
         delivery_mode=DeliveryMode.PERSISTENT,
     )
-    await logs_exchange.publish(message, routing_key="test")
+    if logs_exchange is not None:
+        await logs_exchange.publish(message, routing_key="test")
 
     return eventResponseModel(file=fileVerdict, process=processVerdict)
 

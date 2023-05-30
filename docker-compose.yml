@@ -9,6 +9,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+
     volumes:
       - ./mongo_data:/data/db
 
@@ -19,6 +20,9 @@ services:
     stop_grace_period: 1s
     environment:
       MONGO_URL: "mongodb://root:example@mongo:27017"
+      RABBIT_URL : 'amqp://user:bitnami@rabbitmq/'
+      REDIS_URL : 'redis'
+
     ports:
       - '8000:8000'
   prometheus:
